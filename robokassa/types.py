@@ -67,7 +67,6 @@ class Signature:
             password,
             *self._get_serialized_additional_params(),
         )
-        print(hashable_string)
 
         self.value = self._calculate_hash(self.hash_, hashable_string)
 
