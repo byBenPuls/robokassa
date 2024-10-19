@@ -1,10 +1,14 @@
-class UnresolvedAlgorithmType(Exception):
+class UnresolvedAlgorithmTypeError(Exception):
     pass
 
 
-class UnusedStrictUrlParameter(Exception):
+class UnusedStrictUrlParameterError(Exception):
     pass
 
 
-class IncorrectUrlMethod(Exception):
+class IncorrectUrlMethodError(Exception):
+    pass
+
+
+class RobokassaInterfaceError(Exception):
     pass
