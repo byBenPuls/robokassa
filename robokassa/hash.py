@@ -1,7 +1,7 @@
 import hashlib
 from enum import Enum
 
-from robokassa.exceptions import UnresolvedAlgorithmType
+from robokassa.exceptions import UnresolvedAlgorithmTypeError
 
 
 class HashAlgorithm(Enum):
@@ -18,7 +18,7 @@ class Hash:
         self.algorithm = algorithm
 
         if not isinstance(self.algorithm, HashAlgorithm):
-            raise UnresolvedAlgorithmType("Use HashAlgorithm class for that")
+            raise UnresolvedAlgorithmTypeError("Use HashAlgorithm class for that")
 
     def hash_data(self, data: str) -> str:
         data = data.encode()
@@ -39,6 +39,6 @@ class Hash:
         elif self.algorithm == HashAlgorithm.sha512:
             result = hashlib.sha512(data).hexdigest()
         else:
-            raise UnresolvedAlgorithmType("Cannot define algorithm for hashing")
+            raise UnresolvedAlgorithmTypeError("Cannot define algorithm for hashing")
 
         return result
