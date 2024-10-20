@@ -1,3 +1,5 @@
+from hashlib import md5
+
 from robokassa.types import Signature
 from robokassa.hash import Hash, HashAlgorithm
 
@@ -21,3 +23,9 @@ def test_signature():
     assert signature.value
 
     assert signature == signature2
+
+
+def test_hash():
+    hashed_data = Hash(algorithm=HashAlgorithm.md5).hash_data("hello world")
+
+    assert hashed_data == md5(b"hello world").hexdigest().lower()
