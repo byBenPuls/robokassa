@@ -1,8 +1,9 @@
-from dataclasses import dataclass
-from typing import Optional, Union, Dict
+from dataclasses import dataclass, asdict
+from typing import Optional, Union, Dict, Any
 
-from robokassa.exceptions import UnusedStrictUrlParameter
+from robokassa.exceptions import UnusedStrictUrlParameterError
 from robokassa.hash import Hash
+from robokassa.utils import flatten_dict
 
 
 @dataclass
@@ -43,7 +44,7 @@ class Signature:
         if not self._url_data_is_correct(
             self.success_url2, self.success_url2_method
         ) or not self._url_data_is_correct(self.fail_url2, self.fail_url2_method):
-            raise UnusedStrictUrlParameter(
+            raise UnusedStrictUrlParameterError(
                 "If you use success_url2 or fail_url2 don't forget choose"
                 "HTTP method for them.\nAvailable HTTP Methods:\n"
                 "GET, POST. Use them like a uppercase string"
@@ -93,3 +94,27 @@ class Signature:
             if (url is None) or (url_method is None):
                 return False
         return True
+
+
+@dataclass
+class RobokassaParams:
+    merchant_login: Optional[str] = None
+    out_sum: Optional[Union[float, str, int]] = None
+    description: Optional[str] = None
+    signature_value: Optional[str] = None
+    is_test: bool = False
+
+    # additional params
+
+    inc_curr_label: Optional[str] = None
+    payment_methods: Optional[str] = None
+    inv_id: Optional[Union[int, str]] = None
+    culture: Optional[str] = None
+    encoding: Optional[str] = None
+    email: Optional[str] = None
+    expiration_date: Optional[str] = None
+
+    additional_params: Optional[Dict[str, Any]] = None
+
+    def as_dict(self) -> Dict[str, Any]:
+        return flatten_dict(asdict(self), True)
