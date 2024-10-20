@@ -28,7 +28,7 @@ Next, you can use any params like in example: `user_data`,
 `product_id`.
 
 ```python
-my_payment_link = robokassa.generate_link_to_payment_page(
+my_payment_link = robokassa.payment.link.generate_by_script(
     out_sum=1000,
     inv_id=0,
     description="It's my description",
@@ -43,7 +43,7 @@ my_payment_link = robokassa.generate_link_to_payment_page(
 * Check signature when you received robokassa notification
 in result, success or fail urls.
 ```python
-signature_is_success = robokassa.result_url_signature_is_valid(
+signature_is_success = robokassa.payment.check.result_url_signature_is_valid(
     result_signature=("f31b7e1a669ee8686f14be357e5ed2144"
                       "1aca28893fa5b80032ad7f57af07fca80"
                       "2c5f23abb2628ec2d7826af43c8919d7d"
