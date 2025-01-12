@@ -1,3 +1,4 @@
+from hmac import compare_digest
 from dataclasses import dataclass, asdict
 from typing import Optional, Union, Dict, Any
 
@@ -75,7 +76,7 @@ class Signature:
         if not isinstance(other, Signature):
             raise TypeError("Cannot use this type for signature")
 
-        return other.value == self.value
+        return compare_digest(other.value, self.value)
 
     def _get_serialized_additional_params(self) -> list:
         if self.additional_params is None:
