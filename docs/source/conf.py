@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Robokassa"
-copyright = "2024, Ben Puls"
+copyright = "2025, Ben Puls"
 author = "Ben Puls"
 
 # -- General configuration ---------------------------------------------------
