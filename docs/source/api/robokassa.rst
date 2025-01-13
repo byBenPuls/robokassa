@@ -1,21 +1,36 @@
 Robokassa
 *****************************
 
-Robokassa instance can be created from :code:`robokassa.Robokassa` (:code:`from robokassa import Robokassa`) and
-you can't use methods without instance of robokassa with configured data (merchant login and passwords).
+Экземпляр :code:`Robokassa` (:code:`from robokassa import Robokassa`) требует
+введённых данных для работы с API.
 
-This class has aliases for all methods and named in :code:`lower_camel_case`.
+В настоящее время поддерживается как синхронная, так и асинхронная версии.
+Для того, чтобы работать асинхронно с получением ссылок оплаты или другим
+функционалом необходимо создать другой экземпляр :code:`Robokassa`,
+импортированный из (:code:`from robokassa.asyncio import Robokassa`).
 
-For example :code:`sendMessage` named :code:`send_message` and has the same specification with all class-based methods.
+Все методы и аргументы, указываемые в методах, одинаковые, если сравнивать 2 экземпляра.
+Конечно, при использовании асинхронных методов вы должны отдавать себе отчёт о происходящем
+и не смешивать синхронные и асинхронные i/o операции. Асинхронное программирование требует больше
+навыков и знаний в разработке приложений.
 
 .. warning::
 
-    A full list of methods can be found in the appropriate section of the documentation
+    Хотя в настоящее время поддерживается синхронный и асинхронный API для работы с :code:`Robokassa`,
+    в будущем планируется полный отказ от синхронного клиента в пользу
+    асинхронного, так как сопровождение 2 клиентов является трудной задачей в разработке и
+    поддерживании библиотеки.
 
-.. autoclass:: robokassa.Robokassa
-    :members: __init__,token,id,context,me,download_file,download
-    :show-inheritance:
-    :member-order: bysource
-    :special-members: __init__
-    :undoc-members: True
-    :noindex:
+Пример создания экземпляра класса:
+
+.. code-block:: python
+    
+    from robokassa import Robokassa, HashAlgorithm
+
+    robokassa = Robokassa(
+        merchant_login="my_login",
+        password1="password",
+        password2="password",
+        is_test=False,
+        algorithm=HashAlgorithm.md5,
+    )

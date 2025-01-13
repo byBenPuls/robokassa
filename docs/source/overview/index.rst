@@ -1,21 +1,12 @@
-Overview
+Обзор
 *****************************
 
-
-Concept
+Библиотека
 ============
 
-Robokassa is payment acceptance service.
+Эта библиотека и эта документация не являются продуктами «Robokassa»
 
-
-Library
-============
-
-This library and its description are not a product of Robokassa itself.
-The library does not collect or store your data.
-The library is updated as much as possible.
-
-The library is based on the official technical `documentation`_ of Robokassa.
+Эта библиотека основана на `документации`_ «Robokassa».
 
 
 .. _documentation: https://docs.robokassa.ru/

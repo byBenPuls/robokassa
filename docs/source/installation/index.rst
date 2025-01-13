@@ -1,18 +1,18 @@
-Installation
+Установка
 *****************************
 
 
-How to install?
+Как установить?
 ---------------
 
 
-You can install library with **pip**:
+Установка с помощью **pip**:
 
 .. code-block:: bash
 
     $ pip install robokassa
 
-If you using **poetry**:
+Установка с помощью **poetry**:
 
 .. code-block:: bash
 

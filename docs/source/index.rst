@@ -4,7 +4,7 @@ Robokassa
 .. include:: installation/index.rst
 
 
-Simple usage
+Пример использования
 ------------
 
 .. literalinclude:: ../../examples/link_generator.py
@@ -12,7 +12,7 @@ Simple usage
 
 .. toctree::
     :maxdepth: 3
-    :caption: Contents:
+    :caption: Содержание:
 
     overview/index
     installation/index
@@ -20,7 +20,7 @@ Simple usage
 
 .. toctree::
     :hidden:
-    :caption: Project Links
+    :caption: Ресурсы проекта
 
     GitHub <https://github.com/byBenPuls/robokassa>
     PyPI <https://pypi.org/project/robokassa>
