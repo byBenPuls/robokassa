@@ -25,6 +25,18 @@ def test_signature():
     assert signature == signature2
 
 
+def test_hash_comparison():
+    signature = Signature(
+        inv_id=0, out_sum=1, password="1", hash_=Hash(HashAlgorithm.sha512)
+    )
+
+    signature2 = Signature(
+        inv_id=0, out_sum=1, password="2", hash_=Hash(HashAlgorithm.sha512)
+    )
+
+    assert signature != signature2
+
+
 def test_hash():
     hashed_data = Hash(algorithm=HashAlgorithm.md5).hash_data("hello world")
 
