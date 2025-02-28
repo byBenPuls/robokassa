@@ -15,6 +15,7 @@ class Signature:
 
     out_sum: Optional[Union[float, str, int]] = None
     inv_id: Optional[Union[str, int]] = None
+    receipt: Optional[dict] = None
 
     result_url2: Optional[str] = None
 
@@ -61,6 +62,7 @@ class Signature:
             self.merchant_login,
             self.out_sum,
             inv_id,
+            self.receipt,
             self.result_url2,
             self.success_url2,
             self.success_url2_method,
@@ -103,6 +105,7 @@ class RobokassaParams:
     out_sum: Optional[Union[float, str, int]] = None
     description: Optional[str] = None
     signature_value: Optional[str] = None
+    receipt: Optional[str] = None
     is_test: bool = False
 
     # additional params

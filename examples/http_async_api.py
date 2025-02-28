@@ -15,13 +15,13 @@ robokassa = Robokassa(
 
 
 async def handle_robokassa_request(
-    request: aiohttp.web.Requests,
+    request: aiohttp.web.Request,
 ) -> aiohttp.web.Response:
     post = await request.post()
     data = post
 
     result = robokassa.success_or_fail_signature_is_valid(
-        success_signature=data["SignatureValue"].lower(),
+        signature=data["SignatureValue"].lower(),
         out_sum=data["OutSum"],
         inv_id=data["InvId"],
         **{

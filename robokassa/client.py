@@ -133,6 +133,7 @@ class Robokassa(BaseRobokassa):
         fail_url: Optional[str] = None,
         fail_url_method: Optional[str] = None,
         inv_id: Optional[int] = 0,
+        receipt: Optional[dict] = None,
         description: Optional[str] = None,
         **kwargs,
     ) -> str:
@@ -180,6 +181,7 @@ class Robokassa(BaseRobokassa):
             fail_url=fail_url,
             fail_url_method=fail_url_method,
             inv_id=inv_id,
+            receipt=receipt,
             description=description,
             **kwargs,
         )
@@ -190,6 +192,7 @@ class Robokassa(BaseRobokassa):
         inv_id: Optional[Union[str, int]],
         out_sum: Union[str, int, float],
         description: str,
+        receipt: Optional[dict] = None,
     ) -> str:
         """
         Create a link to payment page by invoice ID.
@@ -208,6 +211,7 @@ class Robokassa(BaseRobokassa):
         return self._link.create_link_to_payment_page_by_invoice_id(
             inv_id=inv_id,
             out_sum=out_sum,
+            receipt=receipt,
             description=description,
         )
 
@@ -228,7 +232,7 @@ class Robokassa(BaseRobokassa):
         :return: True if signature is valid, else False
         """
         return self._checker.success_or_fail_url_signature_is_valid(
-            signature=signature, out_sum=out_sum, inv_id=inv_id, **kwargs
+            success_signature=signature, out_sum=out_sum, inv_id=inv_id, **kwargs
         )
 
     def result_signature_is_valid(

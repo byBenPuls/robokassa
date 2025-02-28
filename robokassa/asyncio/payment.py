@@ -4,7 +4,7 @@ from httpx import Response
 
 from robokassa.asyncio.connection import Requests
 from robokassa.hash import Hash
-from robokassa.payment import PaymentUrlGenerator
+from robokassa.payment import PaymentUrlGenerator, serialize_receipt
 from robokassa.signature import SignaturesChecker
 from robokassa.types import RobokassaParams, Signature
 from robokassa.utils import HttpResponseValidator
@@ -72,12 +72,16 @@ class AsyncPaymentLink:
         )
 
     def _create_signature(
-        self, inv_id: Union[str, int], out_sum: Union[str, int, float]
+        self,
+        inv_id: Union[str, int],
+        out_sum: Union[str, int, float],
+        receipt: Optional[str],
     ) -> Signature:
         return Signature(
             merchant_login=self._merchant_login,
             password=self._password1,
             inv_id=inv_id,
+            receipt=receipt,
             out_sum=out_sum,
             hash_=self._hash_,
         )
@@ -92,12 +96,17 @@ class AsyncPaymentLink:
         fail_url: Optional[str] = None,
         fail_url_method: Optional[str] = None,
         inv_id: Optional[int] = 0,
+        receipt: Optional[str] = None,
         description: Optional[str] = None,
         **kwargs,
     ) -> str:
+        if receipt:
+            receipt = serialize_receipt(receipt)
+
         return self._payment_generator.generate_by_script(
             out_sum=out_sum,
             default_prefix=default_prefix,
+            receipt=receipt,
             result_url=result_url,
             success_url=success_url,
             success_url_method=success_url_method,
@@ -113,15 +122,20 @@ class AsyncPaymentLink:
         inv_id: Optional[Union[str, int]],
         out_sum: Union[str, int, float],
         description: str,
+        receipt: Optional[dict] = None,
     ) -> str:
+        if receipt:
+            receipt = serialize_receipt(receipt)
+
         return await self._payment_interface.create_url_to_payment_page(
             RobokassaParams(
                 is_test=self._is_test,
                 merchant_login=self._merchant_login,
                 inv_id=inv_id,
+                receipt=receipt,
                 out_sum=out_sum,
                 description=description,
-                signature_value=self._create_signature(inv_id, out_sum).value,
+                signature_value=self._create_signature(inv_id, out_sum, receipt).value,
             )
         )
 

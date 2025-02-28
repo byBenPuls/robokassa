@@ -1,5 +1,6 @@
+import json
 from typing import Dict, Any, Optional, Union
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 from httpx import Response
 
@@ -8,6 +9,17 @@ from robokassa.hash import Hash
 from robokassa.signature import SignaturesChecker
 from robokassa.types import Signature, RobokassaParams
 from robokassa.utils import HttpResponseValidator
+
+
+def serialize_receipt(receipt: dict) -> str:
+    """
+    Returns url serialized receipt
+
+    https://docs.robokassa.ru/fiscalization/
+    """
+    json_value = json.dumps(receipt, ensure_ascii=False)
+
+    return quote(json_value, safe="")
 
 
 class PaymentRequests:
@@ -75,6 +87,7 @@ class PaymentUrlGenerator:
         self,
         out_sum: float,
         default_prefix: str = "shp",
+        receipt: Optional[str] = None,
         result_url: Optional[str] = None,
         success_url: Optional[str] = None,
         success_url_method: Optional[str] = None,
@@ -91,11 +104,12 @@ class PaymentUrlGenerator:
             merchant_login=self._merchant_login,
             out_sum=out_sum,
             inv_id=inv_id,
+            receipt=receipt,
             password=self._password,
-            result_url2=result_url,
-            success_url2=success_url,
+            result_url2=quote(result_url, safe="") if result_url else None,
+            success_url2=quote(success_url, safe="") if success_url else None,
             success_url2_method=success_url_method,
-            fail_url2=fail_url,
+            fail_url2=quote(fail_url, safe="") if fail_url else None,
             fail_url2_method=fail_url_method,
             hash_=self._hash,
             additional_params=params,
@@ -116,6 +130,7 @@ class PaymentUrlGenerator:
                 ("MerchantLogin", self._merchant_login),
                 ("OutSum", out_sum),
                 ("InvId", inv_id),
+                ("Receipt", receipt),
                 ("Description", description),
                 *urls_plus_methods.items(),
                 ("SignatureValue", signature),
@@ -157,12 +172,16 @@ class PaymentLink:
         self._STATIC_URL = "https://auth.robokassa.ru/Merchant/Index.aspx"
 
     def _create_signature(
-        self, inv_id: Union[str, int], out_sum: Union[str, int, float]
+        self,
+        inv_id: Union[str, int],
+        receipt: Union[dict],
+        out_sum: Union[str, int, float],
     ) -> Signature:
         return Signature(
             merchant_login=self._merchant_login,
             password=self._password,
             inv_id=inv_id,
+            receipt=receipt,
             out_sum=out_sum,
             hash_=self._hash,
         )
@@ -170,6 +189,7 @@ class PaymentLink:
     def generate_by_script(
         self,
         out_sum: float,
+        receipt: Optional[dict] = None,
         default_prefix: str = "shp",
         result_url: Optional[str] = None,
         success_url: Optional[str] = None,
@@ -180,9 +200,12 @@ class PaymentLink:
         description: Optional[str] = None,
         **kwargs,
     ) -> str:
+        receipt = serialize_receipt(receipt)
+
         return self._payment_generator.generate_by_script(
             out_sum=out_sum,
             default_prefix=default_prefix,
+            receipt=receipt,
             result_url=result_url,
             success_url=success_url,
             success_url_method=success_url_method,
@@ -198,15 +221,19 @@ class PaymentLink:
         inv_id: Optional[Union[int, str]],
         out_sum: Union[float, int, str],
         description: str,
+        receipt: Optional[dict] = None,
     ) -> str:
+        receipt = serialize_receipt(receipt)
+
         return self._payment_interface.create_url_to_payment_page(
             RobokassaParams(
                 inv_id=inv_id,
                 out_sum=out_sum,
+                receipt=receipt,
                 description=description,
                 merchant_login=self._merchant_login,
                 is_test=self._is_test,
-                signature_value=self._create_signature(inv_id, out_sum).value,
+                signature_value=self._create_signature(inv_id, receipt, out_sum).value,
             )
         )
 

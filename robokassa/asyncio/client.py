@@ -144,6 +144,7 @@ class Robokassa(BaseRobokassa):
         inv_id: Optional[Union[str, int]],
         out_sum: Union[str, int, float],
         description: str,
+        receipt: Optional[dict] = None,
     ) -> str:
         """
         Create a link to payment page by invoice ID.
@@ -161,6 +162,7 @@ class Robokassa(BaseRobokassa):
         """
         return await self._link.create_by_invoice_id(
             inv_id=inv_id,
+            receipt=receipt,
             out_sum=out_sum,
             description=description,
         )
