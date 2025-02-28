@@ -1,2 +1,2 @@
 ### Plans:
-- [ ] Add Receipt param in request
+- [x] Add Receipt param in request
