@@ -140,7 +140,7 @@ class PaymentUrlGenerator:
         }
         return (
             f"{self._get_serialized_link_to_payment_page(url_params)}"
-            f"&{"&".join(additional_params_for_url)}"
+            f"&{'&'.join(additional_params_for_url)}"
         )
 
 
