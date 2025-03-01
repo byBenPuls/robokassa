@@ -97,6 +97,7 @@ class AsyncPaymentLink:
         fail_url_method: Optional[str] = None,
         inv_id: Optional[int] = 0,
         receipt: Optional[str] = None,
+        recurring: bool = False,
         description: Optional[str] = None,
         **kwargs,
     ) -> str:
@@ -114,6 +115,7 @@ class AsyncPaymentLink:
             fail_url_method=fail_url_method,
             inv_id=inv_id,
             description=description,
+            recurring=recurring,
             **kwargs,
         )
 

@@ -135,6 +135,7 @@ class Robokassa(BaseRobokassa):
         inv_id: Optional[int] = 0,
         receipt: Optional[dict] = None,
         description: Optional[str] = None,
+        recurring: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -182,6 +183,7 @@ class Robokassa(BaseRobokassa):
             fail_url_method=fail_url_method,
             inv_id=inv_id,
             receipt=receipt,
+            recurrent=recurring,
             description=description,
             **kwargs,
         )
