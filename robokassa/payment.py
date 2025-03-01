@@ -95,6 +95,7 @@ class PaymentUrlGenerator:
         fail_url_method: Optional[str] = None,
         inv_id: Optional[int] = 0,
         description: Optional[str] = None,
+        recurring: bool = False,
         **kwargs,
     ):
         params = self._serialize_additional_params(default_prefix, kwargs)
@@ -132,11 +133,12 @@ class PaymentUrlGenerator:
                 ("InvId", inv_id),
                 ("Receipt", receipt),
                 ("Description", description),
+                ("Recurring", "true" if recurring else "false"),
                 *urls_plus_methods.items(),
                 ("SignatureValue", signature),
                 ("IsTest", int(self._is_test)),
             ]
-            if v is not None
+            if v and v != "null"
         }
         return (
             f"{self._get_serialized_link_to_payment_page(url_params)}"
@@ -198,6 +200,7 @@ class PaymentLink:
         fail_url_method: Optional[str] = None,
         inv_id: Optional[int] = 0,
         description: Optional[str] = None,
+        recurrent: bool = False,
         **kwargs,
     ) -> str:
         receipt = serialize_receipt(receipt)
@@ -206,6 +209,7 @@ class PaymentLink:
             out_sum=out_sum,
             default_prefix=default_prefix,
             receipt=receipt,
+            recurring=recurrent,
             result_url=result_url,
             success_url=success_url,
             success_url_method=success_url_method,
