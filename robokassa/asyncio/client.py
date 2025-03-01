@@ -88,6 +88,7 @@ class Robokassa(BaseRobokassa):
         fail_url: Optional[str] = None,
         fail_url_method: Optional[str] = None,
         inv_id: Optional[int] = 0,
+        recurring: bool = False,
         description: Optional[str] = None,
         **kwargs: Any,
     ) -> str:
@@ -134,6 +135,7 @@ class Robokassa(BaseRobokassa):
             success_url_method=success_url_method,
             fail_url=fail_url,
             fail_url_method=fail_url_method,
+            recurring=recurring,
             inv_id=inv_id,
             description=description,
             **kwargs,
