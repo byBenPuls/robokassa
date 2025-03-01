@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robokassa"
-version = "0.3.4"
+version = "0.3.5"
 description = "Unofficial Robokassa API"
 authors = ["Ben Puls <mail@benpuls.ru>"]
 repository = "https://github.com/byBenPuls/robokassa"
