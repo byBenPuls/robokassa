@@ -57,7 +57,6 @@ class Signature:
 
         inv_id = "" if self.inv_id is None else self.inv_id
         password = self.password
-
         hashable_string = self._serialize_string_for_hash(
             self.merchant_login,
             self.out_sum,
@@ -86,7 +85,7 @@ class Signature:
         return sorted(tuple(f"{k}={v}" for k, v in self.additional_params.items()))
 
     def _serialize_string_for_hash(self, *args) -> str:
-        values = tuple(str(i) for i in (args) if i is not None)
+        values = tuple(str(i) for i in (args) if i is not None and i != "null")
         return ":".join(values)
 
     def _calculate_hash(self, hash_: Hash, data: str) -> str:
@@ -122,3 +121,10 @@ class RobokassaParams:
 
     def as_dict(self) -> Dict[str, Any]:
         return flatten_dict(asdict(self), True)
+
+
+@dataclass
+class RobokassaResponse:
+    url: Optional[str] = None
+    params: Optional[RobokassaParams] = None
+    
