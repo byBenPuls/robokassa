@@ -10,6 +10,8 @@ build:
       - poetry config virtualenvs.create false
     post_install:
       - poetry install --with docs
+      - pip install mkdocs-material
+      - pip install mkdocs-material-extensions
 
 mkdocs:
   configuration: mkdocs.yml
