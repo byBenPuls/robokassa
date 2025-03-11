@@ -1,9 +1,9 @@
+import xml.etree.ElementTree as Et
 from json import JSONDecodeError
 
 import httpx
 
 from robokassa.exceptions import RobokassaInterfaceError
-import xml.etree.ElementTree as Et
 
 correct_keys = {
     "merchant_login": "MerchantLogin",

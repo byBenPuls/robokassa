@@ -1,72 +1,49 @@
-import json
-from typing import Dict, Any, Optional, Union
-from urllib.parse import urlencode, quote
+from collections.abc import Sequence
+from typing import Any, Dict, Optional, Union
+from urllib.parse import quote, urlencode
 
-from httpx import Response
-
-from robokassa.connection import Requests
+from robokassa.connection import Http
+from robokassa.exceptions import RobokassaInterfaceError
 from robokassa.hash import Hash
-from robokassa.signature import SignaturesChecker
-from robokassa.types import Signature, RobokassaParams
-from robokassa.utils import HttpResponseValidator
+from robokassa.jwt import JWT
+from robokassa.types import RobokassaParams, RobokassaResponse, Signature
 
 
-def serialize_receipt(receipt: dict) -> str:
-    """
-    Returns url serialized receipt
+class LinkGenerator:
+    def __init__(self, hash: Hash, password_1: str) -> None:
+        self._static_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
+        self._password = password_1
+        self._hash = hash
 
-    https://docs.robokassa.ru/fiscalization/
-    """
-    json_value = json.dumps(receipt, ensure_ascii=False)
+    def _create_signature(
+        self,
+        merchant_login: Optional[str] = None,
+        out_sum: Optional[Union[float, str, int]] = None,
+        inv_id: Optional[Union[str | int]] = None,
+        receipt: Optional[dict] = None,
+        result_url2: Optional[str] = None,
+        success_url2: Optional[str] = None,
+        success_url2_method: Optional[str] = None,
+        fail_url2: Optional[str] = None,
+        fail_url2_method: Optional[str] = None,
+        additional_params: Optional[Dict[str, int | str | float]] = None,
+    ) -> Signature:
+        return Signature(
+            hash_=self._hash,
+            merchant_login=merchant_login,
+            out_sum=out_sum,
+            inv_id=inv_id,
+            receipt=receipt,
+            result_url2=result_url2,
+            success_url2=success_url2,
+            success_url2_method=success_url2_method,
+            fail_url2=fail_url2,
+            fail_url2_method=fail_url2_method,
+            password=self._password,
+            additional_params=additional_params,
+        )
 
-    return quote(json_value, safe="")
-
-
-class PaymentRequests:
-    def __init__(self, http: Requests) -> None:
-        self.connection = http
-        self.payment_url = "https://auth.robokassa.ru/Merchant/Index"
-
-    def _serialize_payment_url(self, invoice_id: str) -> str:
-        return f"{self.payment_url}/{invoice_id}"
-
-    def _make_post_request(self, data: dict) -> Response:
-        with self.connection as conn:
-            response = conn.post("Indexjson.aspx/?", data=data)
-            return response
-
-    def create_url_to_payment_page(self, robokassa_params: RobokassaParams) -> str:
-        response = self._make_post_request(robokassa_params.as_dict())
-        validated_response = HttpResponseValidator(response).validate_http_response()
-
-        invoice_id = validated_response["invoiceID"]
-        return self._serialize_payment_url(invoice_id)
-
-
-class PaymentInterface:
-    def __init__(self, http: Requests) -> None:
-        self._payment_requests = PaymentRequests(http)
-
-    def create_url_to_payment_page(self, robokassa_params: RobokassaParams) -> str:
-        return self._payment_requests.create_url_to_payment_page(robokassa_params)
-
-
-class PaymentUrlGenerator:
-    def __init__(self, merchant_login: str, password: str, is_test: bool, hash_: Hash):
-        self._merchant_login = merchant_login
-        self._password = password
-        self._is_test = is_test
-        self._hash = hash_
-
-        self._STATIC_URL = "https://auth.robokassa.ru/Merchant/Index.aspx"
-
-    def _serialize_additional_params(self, default_prefix: str, params: dict) -> dict:
-        return {f"{default_prefix}_{k}": v for k, v in params.items()}
-
-    def _get_serialized_link_to_payment_page(self, url_params: Dict[str, Any]) -> str:
-        return f"{self._STATIC_URL}?{urlencode(url_params)}"
-
-    def _sort_urls(
+    def _sort_url_params(
         self, urls: Dict[str, str], success_url_method: str, fail_url_method: str
     ) -> Dict[str, str]:
         urls_plus_methods = {}
@@ -83,195 +60,150 @@ class PaymentUrlGenerator:
                     urls_plus_methods[method[0]] = method[1]
         return urls_plus_methods
 
-    def generate_by_script(
-        self,
-        out_sum: float,
-        default_prefix: str = "shp",
-        receipt: Optional[str] = None,
-        result_url: Optional[str] = None,
-        success_url: Optional[str] = None,
-        success_url_method: Optional[str] = None,
-        fail_url: Optional[str] = None,
-        fail_url_method: Optional[str] = None,
-        inv_id: Optional[int] = 0,
-        description: Optional[str] = None,
-        recurring: bool = False,
-        **kwargs,
-    ):
-        params = self._serialize_additional_params(default_prefix, kwargs)
-        additional_params_for_url = sorted([f"{k}={v}" for k, v in params.items()])
+    def _get_serialized_link_to_payment_page(self, url_params: Dict[str, Any]) -> str:
+        return f"{self._static_url}?{urlencode(url_params)}"
 
-        signature = Signature(
-            merchant_login=self._merchant_login,
-            out_sum=out_sum,
-            inv_id=inv_id,
-            receipt=receipt,
-            password=self._password,
-            result_url2=quote(result_url, safe="") if result_url else None,
-            success_url2=quote(success_url, safe="") if success_url else None,
-            success_url2_method=success_url_method,
-            fail_url2=quote(fail_url, safe="") if fail_url else None,
-            fail_url2_method=fail_url_method,
-            hash_=self._hash,
-            additional_params=params,
-        ).value
-
-        urls_plus_methods = self._sort_urls(
-            {
-                "ResultUrl2": result_url,
-                "SuccessUrl2": success_url,
-                "FailUrl2": fail_url,
-            },
-            success_url_method,
-            fail_url_method,
-        )
-        url_params = {
+    def _serialize_url_params(
+        self, params: RobokassaParams, additional: Sequence
+    ) -> dict:
+        return {
             k: v
             for k, v in [
-                ("MerchantLogin", self._merchant_login),
-                ("OutSum", out_sum),
-                ("InvId", inv_id),
-                ("Receipt", receipt),
-                ("Description", description),
-                ("Recurring", "true" if recurring else "false"),
-                *urls_plus_methods.items(),
-                ("SignatureValue", signature),
-                ("IsTest", int(self._is_test)),
+                ("MerchantLogin", params.merchant_login),
+                ("OutSum", params.out_sum),
+                ("InvId", params.inv_id),
+                ("UserIp", params.user_ip),
+                ("Receipt", params.receipt),
+                ("Culture", params.culture),
+                ("Description", params.description),
+                ("ExpirationDate", params.expiration_date),
+                ("Email", params.email),
+                ("Recurring", "true" if params.recurring else False),
+                *additional.items(),
+                ("SignatureValue", params.signature_value),
+                ("IsTest", int(params.is_test)),
             ]
-            if v and v != "null"
+            if v and v != "null" or (isinstance(v, int) and v == 0)
         }
-        return (
+
+    def _assemble_url(self, params: RobokassaParams) -> str:
+        additional_params_for_url = sorted(
+            [f"{k}={v}" for k, v in params.additional_params.items()]
+        )
+
+        urls_plus_methods = self._sort_url_params(
+            {
+                "ResultUrl2": params.result_url,
+                "SuccessUrl2": params.success_url,
+                "FailUrl2": params.fail_url,
+            },
+            params.success_url_method,
+            params.fail_url_method,
+        )
+        url_params = self._serialize_url_params(params, urls_plus_methods)
+
+        url = (
             f"{self._get_serialized_link_to_payment_page(url_params)}"
             f"&{'&'.join(additional_params_for_url)}"
         )
 
+        return url
 
-class PaymentLink:
-    def __init__(
+    def _escape_link(self, link: str) -> str:
+        return quote(link, safe="")
+
+    def _create_header_jwt(self) -> dict:
+        algorithm = self._hash.algorithm.value.upper()
+
+        return {"typ": "JWT", "alg": algorithm}
+
+    def generate_open_payment_link(self, params: RobokassaParams) -> RobokassaResponse:
+        signature = self._create_signature(
+            merchant_login=params.merchant_login,
+            out_sum=params.out_sum,
+            inv_id=params.inv_id,
+            receipt=params.receipt,
+            result_url2=self._escape_link(params.result_url)
+            if params.result_url
+            else None,
+            success_url2=self._escape_link(params.success_url)
+            if params.success_url
+            else None,
+            success_url2_method=params.success_url_method,
+            fail_url2=self._escape_link(params.fail_url) if params.fail_url else None,
+            fail_url2_method=params.fail_url_method,
+            additional_params=params.additional_params,
+        )
+        params.signature_value = signature.value
+
+        return RobokassaResponse(url=self._assemble_url(params), params=params)
+
+    def generate_subscription_payment_link(
+        self, params: RobokassaParams
+    ) -> RobokassaResponse:
+        signature = self._create_signature(
+            out_sum=params.out_sum,
+            inv_id=params.inv_id,
+            receipt=params.receipt,
+            additional_params=params.additional_params,
+        )
+        params.signature_value = signature.value
+
+        return RobokassaResponse(url=self._assemble_url(params), params=params)
+
+    async def generate_protected_payment_link(
+        self, http: Http, params: RobokassaParams
+    ) -> RobokassaResponse:
+        header = self._create_header_jwt()
+        payload = self._serialize_url_params(
+            params,
+            {
+                "InvoiceType": params.invoice_type,
+                "MerchantComments": params.merchant_comments,
+            },
+        )
+
+        del payload["IsTest"]
+
+        signature = f"{params.merchant_login}:{self._password}"
+        jwt = JWT(
+            header=header, payload=payload, signature_key=signature, hash=self._hash
+        ).create()
+
+        async with http as conn:
+            response = await conn.post("CreateInvoice", json=jwt)
+            result = response.json()
+
+            if result.get("isSuccess"):
+                params.id = result["id"]
+                return RobokassaResponse(url=result["url"], params=params)
+            raise RobokassaInterfaceError("Failed to create link")
+
+    async def deactivate_protected_payment_link(
         self,
-        http: Requests,
-        is_test: bool,
-        hash_: Hash,
+        http: Http,
         merchant_login: str,
-        password1: str,
+        encoded_id: Optional[str],
+        id: Optional[str],
+        inv_id: Optional[int],
     ) -> None:
-        self._is_test = is_test
-        self._merchant_login = merchant_login
-        self._password = password1
+        header = self._create_header_jwt()
+        params = {
+            "MerchantLogin": merchant_login,
+            "InvId": inv_id,
+            "Id": id,
+            "EncodedId": encoded_id,
+        }
+        payload = {k: v for k, v in params.items() if v}
+        signature = f"{merchant_login}:{self._password}"
 
-        self._hash: Hash = hash_
+        jwt = JWT(
+            header=header, payload=payload, signature_key=signature, hash=self._hash
+        ).create()
 
-        self.__http = http
-        self._payment_interface = PaymentInterface(http)
+        async with http as conn:
+            response = await conn.post("DeactivateInvoice", json=jwt)
+            result = response.json()
 
-        self._payment_generator = PaymentUrlGenerator(
-            merchant_login=merchant_login,
-            password=password1,
-            is_test=is_test,
-            hash_=self._hash,
-        )
-
-        self._STATIC_URL = "https://auth.robokassa.ru/Merchant/Index.aspx"
-
-    def _create_signature(
-        self,
-        inv_id: Union[str, int],
-        receipt: Union[dict],
-        out_sum: Union[str, int, float],
-    ) -> Signature:
-        return Signature(
-            merchant_login=self._merchant_login,
-            password=self._password,
-            inv_id=inv_id,
-            receipt=receipt,
-            out_sum=out_sum,
-            hash_=self._hash,
-        )
-
-    def generate_by_script(
-        self,
-        out_sum: float,
-        receipt: Optional[dict] = None,
-        default_prefix: str = "shp",
-        result_url: Optional[str] = None,
-        success_url: Optional[str] = None,
-        success_url_method: Optional[str] = None,
-        fail_url: Optional[str] = None,
-        fail_url_method: Optional[str] = None,
-        inv_id: Optional[int] = 0,
-        description: Optional[str] = None,
-        recurrent: bool = False,
-        **kwargs,
-    ) -> str:
-        receipt = serialize_receipt(receipt)
-
-        return self._payment_generator.generate_by_script(
-            out_sum=out_sum,
-            default_prefix=default_prefix,
-            receipt=receipt,
-            recurring=recurrent,
-            result_url=result_url,
-            success_url=success_url,
-            success_url_method=success_url_method,
-            fail_url=fail_url,
-            fail_url_method=fail_url_method,
-            inv_id=inv_id,
-            description=description,
-            **kwargs,
-        )
-
-    def create_link_to_payment_page_by_invoice_id(
-        self,
-        inv_id: Optional[Union[int, str]],
-        out_sum: Union[float, int, str],
-        description: str,
-        receipt: Optional[dict] = None,
-    ) -> str:
-        receipt = serialize_receipt(receipt)
-
-        return self._payment_interface.create_url_to_payment_page(
-            RobokassaParams(
-                inv_id=inv_id,
-                out_sum=out_sum,
-                receipt=receipt,
-                description=description,
-                merchant_login=self._merchant_login,
-                is_test=self._is_test,
-                signature_value=self._create_signature(inv_id, receipt, out_sum).value,
-            )
-        )
-
-
-class Payment:
-    def __init__(
-        self,
-        http: Requests,
-        is_test: bool,
-        hash_: Hash,
-        merchant_login: str,
-        password1: str,
-        password2: str,
-    ) -> None:
-        self._is_test = is_test
-        self._hash = hash_
-        self._merchant_login = merchant_login
-        self._password1 = password1
-        self._password2 = password2
-
-        self.__http = http
-
-    @property
-    def link(self) -> PaymentLink:
-        return PaymentLink(
-            http=self.__http,
-            is_test=self._is_test,
-            hash_=self._hash,
-            merchant_login=self._merchant_login,
-            password1=self._password1,
-        )
-
-    @property
-    def check(self) -> SignaturesChecker:
-        return SignaturesChecker(
-            hash_=self._hash, password1=self._password1, password2=self._password2
-        )
+            if not result.get("isSuccess"):
+                raise RobokassaInterfaceError("Failed to deactivate invoice")

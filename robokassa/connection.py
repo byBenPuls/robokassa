@@ -1,30 +1,10 @@
-from typing import Optional
-
-from httpx import Client
+from httpx import AsyncClient
 
 
-class BaseHttpConnection:
-    pass
+class Http(AsyncClient):
+    def __init__(self, base_url: str, *args, **kwargs):
+        super().__init__(base_url=base_url, *args, **kwargs)
 
 
-class HttpConnection(BaseHttpConnection):
-    def __init__(self, base_url: str = "") -> None:
-        self.base_url: str = base_url
-
-        self._sync_client: Optional[Client] = None
-
-    def __enter__(self) -> Client:
-        self._sync_client = Client(base_url=self.base_url)
-        return self._sync_client
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self._sync_client.close()
-
-
-class BaseRequests:
-    pass
-
-
-class Requests(BaseRequests):
-    _base_url = "https://auth.robokassa.ru/Merchant"
-    connection = HttpConnection(base_url=_base_url)
+AUTH_BASE_URL = "https://auth.robokassa.ru/Merchant"
+SERVICES_BASE_URL = "https://services.robokassa.ru/InvoiceServiceWebApi/api"
