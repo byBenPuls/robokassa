@@ -1,4 +1,4 @@
-from robokassa import Robokassa, HashAlgorithm
+from robokassa import HashAlgorithm, Robokassa
 
 robokassa = Robokassa(
     merchant_login="my_login",
@@ -8,4 +8,4 @@ robokassa = Robokassa(
     algorithm=HashAlgorithm.md5,
 )
 
-my_link = robokassa.create_link_to_payment_page_by_script(out_sum=1000, inv_id=0)
+my_link = robokassa.generate_open_payment_link(out_sum=1000, inv_id=0)

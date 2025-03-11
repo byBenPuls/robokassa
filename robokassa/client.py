@@ -1,13 +1,26 @@
-from typing import Optional, Union
+from datetime import datetime
+from typing import List, Optional, Union
 
-from robokassa.connection import Requests
+from robokassa.connection import AUTH_BASE_URL, SERVICES_BASE_URL, Http
 from robokassa.exceptions import (
-    UnusedStrictUrlParameterError,
     IncorrectUrlMethodError,
+    RobokassaInterfaceError,
+    UnusedParameterError,
+    UnusedStrictUrlParameterError,
 )
-from robokassa.hash import HashAlgorithm, Hash
-from robokassa.merchant import Merchant
-from robokassa.payment import Payment
+from robokassa.hash import Hash, HashAlgorithm
+from robokassa.merchant import OperationStateChecker
+from robokassa.payment import LinkGenerator
+from robokassa.signature import SignatureChecker
+from robokassa.types import (
+    Culture,
+    HTTPMethod,
+    InvoiceType,
+    PaymentDetails,
+    PaymentMethod,
+    RobokassaParams,
+    RobokassaResponse,
+)
 
 
 class RobokassaAbstract:
@@ -22,7 +35,6 @@ class BaseRobokassa(RobokassaAbstract):
         password2: str,
         algorithm: HashAlgorithm = HashAlgorithm.md5,
         is_test: bool = False,
-        use_standard_naming_of_additional_link_params: bool = True,
     ) -> None:
         self._merchant_login = merchant_login
         self._password1 = password1
@@ -30,14 +42,31 @@ class BaseRobokassa(RobokassaAbstract):
         self._algorithm = algorithm
         self._is_test = is_test
 
-        self._use_standard_naming_of_additional_link_params = (
-            use_standard_naming_of_additional_link_params
-        )
-
         self._hash = self._init_hash(self._algorithm)
+        self._link_generator = self._init_link_generator()
+        self._signature_checker = self._init_signature_checker()
+        self._operation_state_checker = self._init_operation_state_checker()
+
+    def _create_http(self, url: str) -> Http:
+        return Http(url)
 
     def _init_hash(self, algorithm: HashAlgorithm) -> Hash:
         return Hash(algorithm)
+
+    def _init_link_generator(self) -> LinkGenerator:
+        return LinkGenerator(hash=self._hash, password_1=self._password1)
+
+    def _init_signature_checker(self) -> SignatureChecker:
+        return SignatureChecker(
+            hash_=self._hash, password1=self._password1, password2=self._password2
+        )
+
+    def _init_operation_state_checker(self) -> OperationStateChecker:
+        return OperationStateChecker(
+            merchant_login=self._merchant_login,
+            hash=self._hash,
+            password_2=self._password2,
+        )
 
     @property
     def merchant_login(self) -> str:
@@ -63,7 +92,6 @@ class Robokassa(BaseRobokassa):
         password2: str,
         algorithm: HashAlgorithm = HashAlgorithm.md5,
         is_test: bool = False,
-        use_standard_naming_of_additional_link_params: bool = True,
     ) -> None:
         super().__init__(
             merchant_login=merchant_login,
@@ -71,73 +99,28 @@ class Robokassa(BaseRobokassa):
             password2=password2,
             algorithm=algorithm,
             is_test=is_test,
-            use_standard_naming_of_additional_link_params=use_standard_naming_of_additional_link_params,
         )
 
-        self.__http = self._init_http_connection()
-
-        self._payment = self._init_payment(
-            http=self.__http,
-            is_test=is_test,
-            merchant_login=self.merchant_login,
-            password1=self._password1,
-            password2=self._password2,
-            hash_=self._hash,
-        )
-        self._merchant = self._init_merchant(
-            self.__http,
-            self._merchant_login,
-        )
-
-        self._link = self._payment.link
-        self._checker = self._payment.check
-
-    def _init_merchant(
+    def generate_open_payment_link(
         self,
-        http: Requests,
-        merchant_login: str,
-    ) -> Merchant:
-        return Merchant(
-            http=http,
-            merchant_login=merchant_login,
-        )
-
-    def _init_payment(
-        self,
-        http: Requests,
-        is_test: bool,
-        merchant_login: str,
-        password1: str,
-        password2: str,
-        hash_: Hash,
-    ) -> Payment:
-        return Payment(
-            http=http,
-            is_test=is_test,
-            merchant_login=merchant_login,
-            password1=password1,
-            password2=password2,
-            hash_=hash_,
-        )
-
-    def _init_http_connection(self) -> Requests:
-        return Requests()
-
-    def create_link_to_payment_page_by_script(
-        self,
-        out_sum: float,
+        out_sum: Union[float, int],
         default_prefix: str = "shp",
         result_url: Optional[str] = None,
         success_url: Optional[str] = None,
-        success_url_method: Optional[str] = None,
+        success_url_method: Optional[HTTPMethod] = None,
         fail_url: Optional[str] = None,
-        fail_url_method: Optional[str] = None,
-        inv_id: Optional[int] = 0,
+        fail_url_method: Optional[HTTPMethod] = None,
+        inv_id: int = 0,
         receipt: Optional[dict] = None,
         description: Optional[str] = None,
         recurring: bool = False,
+        culture: Culture = Culture.RU,
+        email: Optional[str] = None,
+        expiration_date: Optional[datetime] = None,
+        user_ip: Optional[str] = None,
+        payment_methods: Optional[List[PaymentMethod]] = None,
         **kwargs,
-    ) -> str:
+    ) -> RobokassaResponse:
         """
         Create a link to payment page by common params with signature.
         Link of this method will look like:
@@ -161,6 +144,127 @@ class Robokassa(BaseRobokassa):
         :param kwargs: Any additional params without `shp_` prefix
         :return: Link to payment page
         """
+
+        available_http_methods = (HTTPMethod.GET, HTTPMethod.POST, None)
+
+        if (success_url is not None) != (success_url_method is not None):
+            raise UnusedStrictUrlParameterError(
+                "If you use URL, you also need to choose a HTTP method"
+            )
+        if (
+            success_url_method not in available_http_methods
+            or fail_url_method not in available_http_methods
+        ):
+            raise IncorrectUrlMethodError("You can use only GET or POST methods")
+
+        params = RobokassaParams(
+            is_test=self._is_test,
+            merchant_login=self._merchant_login,
+            out_sum=out_sum,
+            inv_id=inv_id,
+            receipt=receipt,
+            description=description,
+            recurring=recurring,
+            payment_methods=payment_methods,
+            success_url=success_url,
+            success_url_method=success_url_method,
+            fail_url=fail_url,
+            fail_url_method=fail_url_method,
+            result_url=result_url,
+            default_prefix=default_prefix,
+            culture=culture,
+            email=email,
+            user_ip=user_ip,
+            expiration_date=expiration_date,
+            additional_params=kwargs,
+        )
+        return self._link_generator.generate_open_payment_link(params=params)
+
+    def generate_subscription_link(
+        self,
+        inv_id: int,
+        previous_inv_id: int,
+        out_sum: int,
+        receipt: Optional[dict] = None,
+    ) -> RobokassaResponse:
+        params = RobokassaParams(
+            is_test=self._is_test,
+            merchant_login=self._merchant_login,
+            out_sum=out_sum,
+            inv_id=inv_id,
+            previous_inv_id=previous_inv_id,
+            receipt=receipt,
+        )
+        return self._link_generator.generate_subscription_payment_link(params=params)
+
+    async def generate_protected_payment_link(
+        self,
+        invoice_type: InvoiceType,
+        out_sum: float,
+        merchant_comments: str,
+        default_prefix: str = "shp",
+        result_url: Optional[str] = None,
+        success_url: Optional[str] = None,
+        success_url_method: Optional[str] = None,
+        fail_url: Optional[str] = None,
+        fail_url_method: Optional[str] = None,
+        inv_id: int = 0,
+        receipt: Optional[dict] = None,
+        description: Optional[str] = None,
+        recurring: bool = False,
+        culture: Culture = Culture.RU,
+        email: Optional[str] = None,
+        expiration_date: Optional[datetime] = None,
+        **kwargs,
+    ) -> RobokassaResponse:
+        """
+        Generate payment link using JWT
+        https://docs.robokassa.ru/pay-interface/#jwt
+
+
+        :param invoice_type: Type of invoice
+        :type invoice_type: InvoiceType
+        :param out_sum: Out sum
+        :type out_sum: float
+        :param merchant_comments: Description for merchant
+        :type merchant_comments: str
+        :param default_prefix: Prefix: shp, Shp or SHP. Default: shp (use without `_`)
+        :type default_prefix: str
+        :param result_url: url
+        :type result_url:
+        :param success_url: url
+        :type success_url: str
+        :param success_url_method: Method: GET, POST
+        :type success_url_method:
+        :param fail_url: url
+        :type fail_url: str
+        :param fail_url_method: Method: GET, POST
+        :type fail_url_method:
+        :param inv_id: Invoice ID
+        :type inv_id: int
+        :param receipt: Receipt. See: https://docs.robokassa.ru/fiscalization/
+        :type receipt: dict
+        :param description: Description of payment page
+        :type description: str
+        :param recurring: Is recurring payment? See: https://docs.robokassa.ru/recurring/
+        :type recurring: bool
+        :param culture: Language of payment page
+        :type culture: Culture
+        :param email: User email
+        :type email: str
+        :param expiration_date: Datetime obj when link expire
+        :type expiration_date:
+        :param kwargs: additional payments params without shp_.
+        :type kwargs:
+        :return: RobokassaResponse
+        :rtype: RobokassaResponse
+        """
+
+        if self.is_test:
+            raise RobokassaInterfaceError(
+                "generate_protected_payment_link is unavailable in Test mode"
+            )
+
         available_http_methods = ("GET", "POST", None)
 
         if (success_url is not None) != (success_url_method is not None):
@@ -173,51 +277,65 @@ class Robokassa(BaseRobokassa):
         ):
             raise IncorrectUrlMethodError("You can use only GET or POST methods")
 
-        payment_link = self._link.generate_by_script(
-            default_prefix=default_prefix,
+        params = RobokassaParams(
+            is_test=self._is_test,
+            merchant_login=self._merchant_login,
             out_sum=out_sum,
-            result_url=result_url,
+            inv_id=inv_id,
+            receipt=receipt,
+            description=description,
+            recurring=recurring,
+            merchant_comments=merchant_comments,
+            invoice_type=invoice_type,
             success_url=success_url,
             success_url_method=success_url_method,
             fail_url=fail_url,
             fail_url_method=fail_url_method,
-            inv_id=inv_id,
-            receipt=receipt,
-            recurrent=recurring,
-            description=description,
-            **kwargs,
+            result_url=result_url,
+            default_prefix=default_prefix,
+            culture=culture,
+            email=email,
+            expiration_date=expiration_date,
+            additional_params=kwargs,
         )
-        return payment_link
 
-    def create_link_to_payment_page_by_invoice_id(
+        return await self._link_generator.generate_protected_payment_link(
+            http=self._create_http(SERVICES_BASE_URL),
+            params=params,
+        )
+
+    async def deactivate_invoice(
         self,
-        inv_id: Optional[Union[str, int]],
-        out_sum: Union[str, int, float],
-        description: str,
-        receipt: Optional[dict] = None,
-    ) -> str:
+        inv_id: Optional[int] = None,
+        encoded_id: Optional[str] = None,
+        id: Optional[str] = None,
+    ) -> None:
         """
-        Create a link to payment page by invoice ID.
-        It is mean what params will hide.
+        Deactivate invoice using invoiceId, Id or EncodedId
 
-        Link of this method will look like:
-
-        `https://auth.robokassa.ru/Merchant/Index/41734593-dc97-dc5f-d329-a73158e4cb29`
-
-
-        :param inv_id:
-        :param out_sum:
-        :param description: Shop description
-        :return: Url to payment page
+        :param inv_id: The account number specified by the seller when creating the link.
+        :type inv_id:
+        :param encoded_id: The last part of the invoice link.
+        For example: https://auth.robokassa.ru/merchant/Invoice/6hucaX7-BkKNi4lyi-Iu2g.
+        :type encoded_id: str
+        :param id: The invoice ID is returned in response to an invoice request.
+        :type id: str
         """
-        return self._link.create_link_to_payment_page_by_invoice_id(
+
+        if not inv_id and not encoded_id and not id:
+            raise UnusedParameterError(
+                "Provide inv_id or encoded_id or id of invoice for deactivation"
+            )
+
+        return await self._link_generator.deactivate_protected_payment_link(
+            http=self._create_http(SERVICES_BASE_URL),
+            merchant_login=self._merchant_login,
             inv_id=inv_id,
-            out_sum=out_sum,
-            receipt=receipt,
-            description=description,
+            encoded_id=encoded_id,
+            id=id,
         )
 
-    def success_or_fail_signature_is_valid(
+    def is_redirect_valid(
         self,
         signature: str,
         out_sum: Union[str, int, float],
@@ -233,11 +351,12 @@ class Robokassa(BaseRobokassa):
         :param kwargs: Additional params with `shp_` prefix
         :return: True if signature is valid, else False
         """
-        return self._checker.success_or_fail_url_signature_is_valid(
+
+        return self._signature_checker.success_or_fail_url_signature_is_valid(
             success_signature=signature, out_sum=out_sum, inv_id=inv_id, **kwargs
         )
 
-    def result_signature_is_valid(
+    def is_result_notification_valid(
         self,
         signature: str,
         out_sum: Union[str, int, float],
@@ -253,26 +372,21 @@ class Robokassa(BaseRobokassa):
         :param kwargs: Additional params with `shp_` prefix
         :return: True if signature is valid, else False
         """
-        return self._checker.result_url_signature_is_valid(
-            signature=signature, out_sum=out_sum, inv_id=inv_id, **kwargs
+
+        return self._signature_checker.result_url_signature_is_valid(
+            result_signature=signature, out_sum=out_sum, inv_id=inv_id, **kwargs
         )
 
-    def get_currencies(self, language: str = "en") -> dict:
+    async def get_payment_details(self, inv_id: int) -> PaymentDetails:
         """
-        Get available currencies of merchant.
+        Get details of operation by invoice ID
 
-        :param language: `ru` or `en`
-        :return: dictionary of currencies
+        :param inv_id: Invoice ID
+        :type inv_id: int
+        :return: Details of operation
+        :rtype: PaymentDetails
         """
-        return self._merchant.get_currencies(language=language)
 
-    # def get_operation_state(self, invoice_id: Union[str, int]) -> dict:
-    #     signature = Signature(
-    #         merchant_login=self._merchant_login,
-    #         inv_id=invoice_id,
-    #         password=self._password2,
-    #         hash_=self._hash,
-    #     )
-    #     return self._merchant.get_operation_state(
-    #         invoice_id=invoice_id, signature_value=signature.value
-    #     )
+        return await self._operation_state_checker.get_state(
+            http=self._create_http(AUTH_BASE_URL), inv_id=inv_id
+        )

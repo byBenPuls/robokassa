@@ -1,10 +1,10 @@
-from typing import Optional, Union, Any
+from typing import Any, Optional, Union
 
-from robokassa.types import Signature
 from robokassa.hash import Hash
+from robokassa.types import Signature
 
 
-class SignaturesChecker:
+class SignatureChecker:
     def __init__(self, hash_: Hash, password1: str, password2: str) -> None:
         self._hash: Hash = hash_
         self._password1 = password1

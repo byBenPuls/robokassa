@@ -1,9 +1,8 @@
 import aiohttp
 from aiohttp import web
 
-from robokassa.hash import HashAlgorithm
 from robokassa import Robokassa
-
+from robokassa.hash import HashAlgorithm
 
 robokassa = Robokassa(
     merchant_login="login",
@@ -20,7 +19,7 @@ async def handle_robokassa_request(
     post = await request.post()
     data = post
 
-    result = robokassa.success_or_fail_signature_is_valid(
+    result = robokassa.is_redirect_valid(
         signature=data["SignatureValue"].lower(),
         out_sum=data["OutSum"],
         inv_id=data["InvId"],

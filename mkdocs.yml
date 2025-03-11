@@ -1,0 +1,54 @@
+site_name: Robokassa
+repo_url: https://github.com/byBenPuls/robokassa
+repo_name: byBenPuls/robokassa
+
+nav:
+  - Начало работы: index.md
+  - Robokassa: robokassa.md
+  - Создание ссылки оплаты: links.md
+  - Деактивация счёта/ссылки: deactivation.md
+  - Получения статуса операции: operation.md
+  - Подтверждение и переадресация: confirmation.md
+  - FAQ: faq.md
+
+theme:
+  language: ru
+  name: material
+  highlightjs: true
+  icon:
+    repo: fontawesome/brands/github
+  palette: 
+
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    - content.tooltips
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - tables
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - abbr
+  - attr_list
+  - pymdownx.snippets
+
+extra_css:
+  - custom.css
