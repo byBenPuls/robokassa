@@ -1,79 +1,51 @@
 import pytest
 
-from robokassa import Robokassa, HashAlgorithm
-from robokassa.exceptions import RobokassaInterfaceError
-from robokassa.types import RobokassaParams
-
-from robokassa.asyncio import Robokassa as AsyncRobokassa
+from robokassa import Robokassa
+from robokassa.hash import HashAlgorithm
+from robokassa.types import Culture, HTTPMethod
 
 
-pytest_plugins = ("pytest_asyncio",)
-
-
-class TestRobokassaClient:
-    robokassa = Robokassa(
+@pytest.fixture
+def robokassa():
+    return Robokassa(
         merchant_login="test_login",
-        password1="password",
-        password2="password",
-        algorithm=HashAlgorithm.sha384,
-    )
-
-    result_url = "https://example.com"
-
-    def test_client(self) -> None:
-        assert self.robokassa._merchant_login == "test_login"
-
-    def test_link_generator(self) -> None:
-        link = self.robokassa.create_link_to_payment_page_by_script(out_sum=1, inv_id=0)
-        assert link
-
-    def test_robokassa_params(self) -> None:
-        dict_params = RobokassaParams(
-            merchant_login="test_login",
-            out_sum=1,
-            description="Hello, World!",
-            additional_params={"shp_id": 1234, "shp_data": "My data"},
-        )
-        assert isinstance(dict_params.as_dict(), dict)
-
-    def test_robokassa_currency(self) -> None:
-        result = self.robokassa.get_currencies(language="en")
-
-        assert result
-        assert isinstance(result, dict)
-
-
-class TestRobokassaAsyncioClient:
-    robokassa = AsyncRobokassa(
-        is_test=True,
-        merchant_login="test_login",
-        password1="<PASSWORD>",
-        password2="<PASSWORD>",
+        password1="test_pass1",
+        password2="test_pass2",
         algorithm=HashAlgorithm.md5,
+        is_test=True,
     )
 
-    @pytest.mark.asyncio
-    async def test_link(self) -> None:
-        try:
-            link = self.robokassa.create_link_to_payment_page_by_script(
-                out_sum=1,
-                inv_id=0,
-            )
-            assert link
 
-            link1 = await self.robokassa.create_link_to_payment_page_by_invoice_id(
-                inv_id=0,
-                description="Hello world!",
-                out_sum=1000,
-            )
-            assert link1
+def test_generate_open_payment_link(robokassa):
+    response = robokassa.generate_open_payment_link(
+        out_sum=100.0,
+        inv_id=1,
+        description="Test Payment",
+        success_url="https://success.ru",
+        success_url_method=HTTPMethod.POST,
+        fail_url="https://fail.ru",
+        fail_url_method=HTTPMethod.POST,
+        culture=Culture.RU,
+    )
+    assert response.url.startswith("https://auth.robokassa.ru/Merchant/Index.aspx")
 
-        except RobokassaInterfaceError as ex:
-            assert "26" in str(ex)
 
-    @pytest.mark.asyncio
-    async def test_currency(self) -> None:
-        data = await self.robokassa.get_currencies(language="en")
+def test_generate_subscription_link(robokassa):
+    response = robokassa.generate_subscription_link(
+        inv_id=1, previous_inv_id=0, out_sum=500
+    )
+    assert response.url.startswith("https://auth.robokassa.ru/Merchant/Index.aspx")
 
-        assert data
-        assert isinstance(data, dict)
+
+def test_is_redirect_valid(robokassa):
+    valid = robokassa.is_redirect_valid(
+        signature="test_signature", out_sum=100.0, inv_id=1
+    )
+    assert isinstance(valid, bool)
+
+
+def test_is_result_notification_valid(robokassa):
+    valid = robokassa.is_result_notification_valid(
+        signature="test_signature", out_sum=100.0, inv_id=1
+    )
+    assert isinstance(valid, bool)
