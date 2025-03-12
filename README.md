@@ -1,59 +1,65 @@
-# Robokassa API
+<p align="center">
+  <img src="assets/banner.png" alt="Robokassa API" width="600">
+</p>
 
-You can use this simple library for create a link or
-use that for checks a signatures.
+# 🚀 Robokassa API
 
-Example:
-* Firstly, create Robokassa instance. If you use this in sandbox mode for test robokassa,
-you need to paste a pair of **test keys**.
-Also, don't forget check what `is_test` argument equals `True`.
+> **Unofficial Python Library for Robokassa Payments**  
+> 💳 Fast & Secure Payment Integration with Just a Few Lines of Code!
+
+<p align="center">
+  <img src="https://img.shields.io/pypi/v/robokassa?color=blue" alt="PyPI Version">
+  <img src="https://img.shields.io/pypi/dm/robokassa?color=green" alt="Downloads">
+  <img src="https://img.shields.io/github/license/byBenPuls/robokassa?color=red" alt="License">
+</p>
+
+---
+
+## 🎨 Features
+✔️ Easy Payment Link Generation  
+✔️ Secure Transactions with Hash Algorithms  
+✔️ Supports all available Hashes  
+✔️ Simple and Fast Integration  
+
+---
+
+## 📦 Installation
+
+```bash
+pip install robokassa
+```
+
+---
+
+## ⚡ Quick Start
+
 ```python
-from robokassa import Robokassa, HashAlgorithm
+from robokassa import HashAlgorithm, Robokassa
 
 robokassa = Robokassa(
     merchant_login="my_login",
-    password1="super_secret_test_password1",
-    password2="super_secret_test_password2",
-    algorithm=HashAlgorithm.sha512,
-    is_test=True
-)
-```
-
-* After that, you can generate a link to payment page
-Write a necessary params for a link. You can use
-additional params. Choose default prefix of params.
-It can be **shp**, **Shp** or **SHP**, don't specify
-`=` symbol. Method automatically generate additional params.
-Next, you can use any params like in example: `user_data`, 
-`product_id`.
-
-```python
-my_payment_link = robokassa.payment.link.generate_by_script(
-    out_sum=1000,
-    inv_id=0,
-    description="It's my description",
-    success_url="https://example.com",
-    success_url_method="POST",
-    default_prefix="shp",
-    user_data="important_user_data",
-    product_id="790ec274-20af-4972-b5d6-c8698d64fb52"
-)
-```
-
-* Check signature when you received robokassa notification
-in result, success or fail urls.
-```python
-signature_is_success = robokassa.payment.check.result_url_signature_is_valid(
-    result_signature=("f31b7e1a669ee8686f14be357e5ed2144"
-                      "1aca28893fa5b80032ad7f57af07fca80"
-                      "2c5f23abb2628ec2d7826af43c8919d7d"
-                      "06b4c6881e774b7dc8a056339a8cf"),
-    inv_id=0,
-    out_sum=1000,
-    shp_user_data="important_user_data",
-    shp_product_id="790ec274-20af-4972-b5d6-c8698d64fb52"
+    password1="password",
+    password2="password",
+    is_test=False,
+    algorithm=HashAlgorithm.md5,
 )
 
-if signature_is_success:
-    print("Nice!")
+payment_link = robokassa.generate_open_payment_link(out_sum=1000, inv_id=0)
+print(payment_link)
 ```
+
+---
+
+## 📖 Documentation
+
+📚 **Full Documentation (in Russian):**  
+🔗 [Read the Docs](https://robokassa.readthedocs.io/)
+
+---
+
+## 🌟 Contribute & Support
+🚀 **Found this project useful?** Show some ❤️ by giving it a star!
+
+---
+
+Made with ❤️ for seamless payment integration.
