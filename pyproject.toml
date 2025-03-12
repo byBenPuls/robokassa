@@ -5,6 +5,7 @@ description = "Unofficial Robokassa API"
 authors = ["Ben Puls <mail@benpuls.ru>"]
 repository = "https://github.com/byBenPuls/robokassa"
 homepage = "https://github.com/byBenPuls/robokassa"
+documentation = "https://robokassa.readthedocs.io/"
 readme = "README.md"
 
 [tool.poetry.dependencies]
