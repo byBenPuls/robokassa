@@ -64,7 +64,7 @@ class LinkGenerator:
         return f"{self._static_url}?{urlencode(url_params)}"
 
     def _serialize_url_params(
-        self, params: RobokassaParams, additional: Sequence
+        self, params: RobokassaParams, additional: Sequence, ignore_names: Sequence = []
     ) -> dict:
         return {
             k: v
@@ -83,7 +83,7 @@ class LinkGenerator:
                 ("SignatureValue", params.signature_value),
                 ("IsTest", int(params.is_test)),
             ]
-            if v and v != "null" or (isinstance(v, int) and v == 0)
+            if k not in ignore_names and v and v != "null" or (isinstance(v, int) and v == 0)
         }
 
     def _assemble_url(self, params: RobokassaParams) -> str:
@@ -111,6 +111,10 @@ class LinkGenerator:
 
     def _escape_link(self, link: str) -> str:
         return quote(link, safe="")
+    
+    def _to_camel_case(self, s: str) -> str:
+        s = s.split("_")
+        return "".join((i.capitalize() if i[0].islower() else i for i in s))
 
     def _create_header_jwt(self) -> dict:
         algorithm = self._hash.algorithm.value.upper()
@@ -155,16 +159,23 @@ class LinkGenerator:
         self, http: Http, params: RobokassaParams
     ) -> RobokassaResponse:
         header = self._create_header_jwt()
+
+        receipt = params.receipt.copy() if params.receipt else {}
+        items = receipt.get("items") if receipt.get("items") else []
+
         payload = self._serialize_url_params(
             params,
             {
                 "InvoiceType": params.invoice_type,
                 "MerchantComments": params.merchant_comments,
+                "InvoiceItems": [{self._to_camel_case(k): v for k, v in item.items()} for item in items],
+                "Sno": receipt.get("sno")
             },
+            ["Receipt"]
         )
 
         del payload["IsTest"]
-
+        print(payload)
         signature = f"{params.merchant_login}:{self._password}"
         jwt = JWT(
             header=header, payload=payload, signature_key=signature, hash=self._hash
