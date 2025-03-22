@@ -133,7 +133,7 @@ class RobokassaParams:
     out_sum: Optional[Union[float, str, int]] = None
     description: Optional[str] = None
     signature_value: Optional[str] = None
-    receipt: Optional[str] = None
+    receipt: Optional[dict] = None
     is_test: bool = False
 
     inc_curr_label: Optional[str] = None
@@ -158,6 +158,8 @@ class RobokassaParams:
     fail_url_method: Optional[HTTPMethod] = None
 
     additional_params: Optional[Dict[str, Any]] = None
+    
+    _serialize_receipt: bool = True
 
     def _encode_receipt(self) -> None:
         encoded = quote(json.dumps(self.receipt, ensure_ascii=False), safe="")
@@ -173,7 +175,8 @@ class RobokassaParams:
         # -------------
         # SERIALIZATION
         # -------------
-        self._encode_receipt()
+        if self._serialize_receipt:
+            self._encode_receipt()
         if self.expiration_date:
             self.expiration_date = self.expiration_date.isoformat()
         if self.payment_methods:
