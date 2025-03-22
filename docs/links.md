@@ -64,7 +64,7 @@ my_link = await robokassa.generate_protected_payment_link(
 | `success_url_method` | В оф. документации Robokassa — `SuccessUrl2Method`<br>Метод переадресации пользователя с данными в случае успешной оплаты  <br><br> **Тип:** `HTTPMethod`  <br> **Обязательный:** ❌ |
 | `fail_url` | В оф. документации Robokassa — `FailUrl2`<br>URL адрес, на который перенаправляется пользователь в случае неудачной оплаты  <br><br> **Тип:** `str`  <br> **Обязательный:** ❌ |
 | `fail_url_method` | В оф. документации Robokassa — `FailUrl2Method`<br>Метод переадресации пользователя с данными в случае неудачной оплаты  <br><br> **Тип:** `HTTPMethod`  <br> **Обязательный:** ❌ |
-
+| `receipt` | Номенклатура, поля которой подробно описаны в разделе про [фискализацию](https://docs.robokassa.ru/fiscalization/) в официальной документации <br><br> **Тип:** `Dict[str, Any]`  <br> **Обязательный:** ❌ |
 
 *[datetime]: datetime.datetime
 *[List]: typing.List
@@ -72,3 +72,5 @@ my_link = await robokassa.generate_protected_payment_link(
 *[PaymentMethod]: robokassa.types.PaymentMethod
 *[HTTPMethod]: robokassa.types.HTTPMethod
 *[Culture]: robokassa.types.Culture
+*[Any]: typing.Any
+*[Dict]: typing.Dict
