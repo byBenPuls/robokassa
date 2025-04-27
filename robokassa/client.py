@@ -205,9 +205,9 @@ class Robokassa(BaseRobokassa):
         default_prefix: str = "shp",
         result_url: Optional[str] = None,
         success_url: Optional[str] = None,
-        success_url_method: Optional[str] = None,
+        success_url_method: Optional[HTTPMethod] = None,
         fail_url: Optional[str] = None,
-        fail_url_method: Optional[str] = None,
+        fail_url_method: Optional[HTTPMethod] = None,
         inv_id: int = 0,
         receipt: Optional[dict] = None,
         description: Optional[str] = None,
@@ -272,8 +272,8 @@ class Robokassa(BaseRobokassa):
                 "If you use URL, you also need to choose a HTTP method"
             )
         if (
-            success_url_method not in available_http_methods
-            or fail_url_method not in available_http_methods
+            success_url_method.value not in available_http_methods
+            or fail_url_method.value not in available_http_methods
         ):
             raise IncorrectUrlMethodError("You can use only GET or POST methods")
 
