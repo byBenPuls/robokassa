@@ -1,6 +1,6 @@
 from robokassa.hash import Hash, HashAlgorithm
 from robokassa.payment import LinkGenerator
-from robokassa.types import RobokassaParams
+
 
 def test_generate_open_payment_link():
     mock_hash = Hash(HashAlgorithm.sha256)
@@ -11,4 +11,3 @@ def test_generate_open_payment_link():
     assert generator._to_camel_case("cost") == "Cost"
     assert generator._to_camel_case("quantity") == "Quantity"
     assert generator._to_camel_case("tax") == "Tax"
-    

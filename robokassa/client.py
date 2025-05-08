@@ -297,7 +297,7 @@ class Robokassa(BaseRobokassa):
             email=email,
             expiration_date=expiration_date,
             additional_params=kwargs,
-            _serialize_receipt=False
+            _serialize_receipt=False,
         )
 
         return await self._link_generator.generate_protected_payment_link(

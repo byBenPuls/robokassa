@@ -83,7 +83,10 @@ class LinkGenerator:
                 ("SignatureValue", params.signature_value),
                 ("IsTest", int(params.is_test)),
             ]
-            if k not in ignore_names and v and v != "null" or (isinstance(v, int) and v == 0)
+            if k not in ignore_names
+            and v
+            and v != "null"
+            or (isinstance(v, int) and v == 0)
         }
 
     def _assemble_url(self, params: RobokassaParams) -> str:
@@ -111,7 +114,7 @@ class LinkGenerator:
 
     def _escape_link(self, link: str) -> str:
         return quote(link, safe="")
-    
+
     def _to_camel_case(self, s: str) -> str:
         s = s.split("_")
         return "".join((i.capitalize() if i[0].islower() else i for i in s))
@@ -168,10 +171,13 @@ class LinkGenerator:
             {
                 "InvoiceType": params.invoice_type,
                 "MerchantComments": params.merchant_comments,
-                "InvoiceItems": [{self._to_camel_case(k): v for k, v in item.items()} for item in items],
-                "Sno": receipt.get("sno")
+                "InvoiceItems": [
+                    {self._to_camel_case(k): v for k, v in item.items()}
+                    for item in items
+                ],
+                "Sno": receipt.get("sno"),
             },
-            ["Receipt"]
+            ["Receipt"],
         )
 
         del payload["IsTest"]
