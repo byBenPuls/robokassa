@@ -158,7 +158,7 @@ class RobokassaParams:
     fail_url_method: Optional[HTTPMethod] = None
 
     additional_params: Optional[Dict[str, Any]] = None
-    
+
     _serialize_receipt: bool = True
 
     def _encode_receipt(self) -> None:
