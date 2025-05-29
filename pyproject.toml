@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robokassa"
-version = "1.0.2"
+version = "1.0.3"
 description = "Unofficial Robokassa API"
 authors = ["Ben Puls <mail@benpuls.ru>"]
 repository = "https://github.com/byBenPuls/robokassa"
@@ -10,7 +10,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.8"
-httpx = "^0.27.2"
+httpx = ">=0.27.2"
 
 
 [tool.poetry.group.dev.dependencies]
