@@ -271,9 +271,14 @@ class Robokassa(BaseRobokassa):
             raise UnusedStrictUrlParameterError(
                 "If you use URL, you also need to choose a HTTP method"
             )
+
         if (
-            success_url_method.value not in available_http_methods
-            or fail_url_method.value not in available_http_methods
+            success_url_method
+            and fail_url_method
+            and (
+                success_url_method.value not in available_http_methods
+                or fail_url_method.value not in available_http_methods
+            )
         ):
             raise IncorrectUrlMethodError("You can use only GET or POST methods")
 
