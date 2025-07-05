@@ -48,6 +48,16 @@ payment_link = robokassa.generate_open_payment_link(out_sum=1000, inv_id=0)
 print(payment_link)
 ```
 
+Async methods available for advanced actions:
+
+```python
+from robokassa.types import InvoiceType
+
+my_link = await robokassa.generate_protected_payment_link(
+    invoice_type=InvoiceType.REUSABLE, inv_id=233, out_sum=1000
+)
+```
+
 ---
 
 ## 📖 Documentation
