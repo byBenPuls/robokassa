@@ -15,7 +15,7 @@ class OperationStateChecker:
         self._hash = hash
         self.__password = password_2
 
-        self._ns = {"ns": "http://merchant.roboxchange.com/WebService/"}
+        self._ns = {"ns": "http://auth.robokassa.ru/Merchant/WebService/"}
 
     def _parse_xml(self, text: str) -> ET.Element:
         return ET.fromstring(text.strip())
@@ -79,17 +79,14 @@ class OperationStateChecker:
                 if self._find_el(xml, "ns:Info/ns:BankCardRRN") is not None
                 else None,
             },
-            "user_field": [
-                {
-                    "name": field.find("ns:Name", self._ns).text
-                    if field.find("ns:Name", self._ns) is not None
-                    else None,
-                    "value": field.find("ns:Value", self._ns).text
-                    if field.find("ns:Value", self._ns) is not None
-                    else None,
-                }
+            "user_field": {
+                field.find("ns:Name", self._ns).text: field.find(
+                    "ns:Value", self._ns
+                ).text
                 for field in xml.findall("ns:UserField/ns:Field", self._ns)
-            ],
+                if field.find("ns:Name", self._ns) is not None
+                and field.find("ns:Value", self._ns) is not None
+            },
         }
 
     def _handle_result_data(self, code: int) -> None:
@@ -151,7 +148,7 @@ class OperationStateChecker:
             out_sum=info.get("out_sum") if info else None,
             op_key=info.get("op_key") if info else None,
             bank_card_rrn=info.get("ban_card_rrn") if info else None,
-            user_fields={k: v for k, v in serialized.get("user_field")}
+            user_fields=serialized.get("user_field")
             if serialized.get("user_field")
             else None,
         )
