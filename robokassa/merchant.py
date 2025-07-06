@@ -15,7 +15,7 @@ class OperationStateChecker:
         self._hash = hash
         self.__password = password_2
 
-        self._ns = {"ns": "http://merchant.roboxchange.com/WebService/"}
+        self._ns = {"ns": "http://auth.robokassa.ru/Merchant/WebService/"}
 
     def _parse_xml(self, text: str) -> ET.Element:
         return ET.fromstring(text.strip())
