@@ -130,14 +130,10 @@ class LinkGenerator:
             out_sum=params.out_sum,
             inv_id=params.inv_id,
             receipt=params.receipt,
-            result_url2=self._escape_link(params.result_url)
-            if params.result_url
-            else None,
-            success_url2=self._escape_link(params.success_url)
-            if params.success_url
-            else None,
+            result_url2=params.result_url,
+            success_url2=params.success_url,
             success_url2_method=params.success_url_method,
-            fail_url2=self._escape_link(params.fail_url) if params.fail_url else None,
+            fail_url2=params.fail_url,
             fail_url2_method=params.fail_url_method,
             additional_params=params.additional_params,
         )
