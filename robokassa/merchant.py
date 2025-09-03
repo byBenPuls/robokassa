@@ -98,7 +98,7 @@ class OperationStateChecker:
             raise RobokassaRequestError("MerchantLogin not found or not activated")
         elif code == 3:
             raise RobokassaRequestError(
-                "Information about a spicified InvoiceId not found"
+                "Information about a specified InvoiceId not found"
             )
         elif code == 4:
             raise RobokassaRequestError("Found 2 operations with same InvoiceId")
