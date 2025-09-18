@@ -6,7 +6,6 @@
 
 > **Unofficial Python Library for Robokassa Payments**  
 > 💳 Fast & Secure Payment Integration with Just a Few Lines of Code!
-
 <p align="center">
   <img src="https://img.shields.io/pypi/v/robokassa?color=blue" alt="PyPI Version">
   <img src="https://img.shields.io/pypi/dm/robokassa?color=green" alt="Downloads">
@@ -14,6 +13,9 @@
 </p>
 
 ---
+
+### 💬 We now have a library discussion on Telegram! - https://t.me/robokassa_for_python
+
 
 ## 🎨 Features
 ✔️ Easy Payment Link Generation  
