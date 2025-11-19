@@ -5,10 +5,11 @@ from robokassa.types import Signature
 
 
 class SignatureChecker:
-    def __init__(self, hash_: Hash, password1: str, password2: str) -> None:
+    def __init__(self, hash_: Hash, password1: str, password2: str, password3: Optional[str] = None) -> None:
         self._hash: Hash = hash_
         self._password1 = password1
         self._password2 = password2
+        self._password3 = password3
 
     def success_or_fail_url_signature_is_valid(
         self,
@@ -47,6 +48,27 @@ class SignatureChecker:
             inv_id=inv_id,
             additional_params=kwargs,
             password=self._password2,
+            hash_=self._hash,
+        )
+
+        return old_signature == new_signature
+
+    def result_refund_url_signature_is_valid(
+        self,
+        result_signature: str,
+        out_sum: Union[str, float, int],
+        inv_id: Optional[Union[str, int]] = None,
+        **kwargs: Any,
+    ) -> bool:
+        old_signature = Signature(
+            value=result_signature.lower(),
+            hash_=self._hash,
+        )
+        new_signature = Signature(
+            out_sum=out_sum,
+            inv_id=inv_id,
+            additional_params=kwargs,
+            password=self._password3,
             hash_=self._hash,
         )
 

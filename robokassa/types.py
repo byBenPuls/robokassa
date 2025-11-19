@@ -224,6 +224,39 @@ class RobokassaParams:
         }
 
 
+@dataclass
+class RobokassaRefundParams:
+    merchant_login: Optional[str] = None
+    refund_sum: Optional[Union[float, str, int]] = None
+    invoice_items: Optional[List[dict]] = None
+    opkey: str = None
+    _serialize_invoice_items: bool = True
+
+    def __post_init__(self) -> None:
+        # -------------
+        # SERIALIZATION
+        # -------------
+        if self._serialize_invoice_items:
+            self._encode_invoice_items()
+
+    def _encode_invoice_items(self) -> None:
+        encoded = quote(json.dumps(self.invoice_items, ensure_ascii=False), safe="")
+        self.invoice_items = encoded if encoded != "null" else None
+
+    def to_dict(self) -> dict:
+        params = (
+            ("OpKey", self.opkey),
+            ("RefundSum", self.refund_sum),
+            ("InvoiceItems", self.invoice_items),
+        )
+
+        return {
+            k: v
+            for k, v in params
+            if v or (isinstance(v, int) and not isinstance(v, bool) and v == 0)
+        }
+
+
 class PaymentState(Enum):
     INITIATED: int = 5
     CANCELLED: int = 10
@@ -234,10 +267,24 @@ class PaymentState(Enum):
     COMPLETED: int = 100
 
 
+class RefundState(Enum):
+    FINISHED: str = 'finished'
+    PROCESSING: str = 'processing'
+    CANCELED: str = 'canceled'
+
+
 @dataclass
 class RobokassaResponse:
     url: Optional[str] = None
     params: Optional[RobokassaParams] = None
+
+
+@dataclass
+class RobokassaRefundResponse:
+    message: Optional[str] = None
+    label: Optional[str] = None
+    amount: Optional[Union[float, str, int]] = None
+    requestId: Optional[str] = None
 
 
 @dataclass
