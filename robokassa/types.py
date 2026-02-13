@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 from urllib.parse import quote
 
 from robokassa.exceptions import UnusedStrictUrlParameterError
-from robokassa.hash import Hash
+from robokassa.hash import Hash, HashAlgorithm
 
 
 @dataclass
@@ -109,6 +109,22 @@ class Signature:
 class PaymentMethod(Enum):
     BANK_CARD: str = "BankCard"
     SBP: str = "SBP"
+
+
+class RefundHashAlgorithm(Enum):
+    """
+    Алгоритмы хеширования для подписи JWT токенов в API возвратов.
+    
+    Примечание: Отличается от HashAlgorithm, который используется для подписи URL-параметров.
+    Для JWT токенов Robokassa поддерживает только алгоритмы HMAC (HS256, HS384, HS512),
+    в то время как для URL-подписей используются обычные хеш-функции (md5, sha256 и др.).
+    Поэтому нельзя напрямую использовать существующий HashAlgorithm enum.
+    
+    По умолчанию используется HS256 как наиболее распространенный и совместимый.
+    """
+    HS256 = "HS256"
+    HS384 = "HS384"
+    HS512 = "HS512"
 
 
 class Culture(Enum):
@@ -238,6 +254,83 @@ class PaymentState(Enum):
 class RobokassaResponse:
     url: Optional[str] = None
     params: Optional[RobokassaParams] = None
+
+
+class RefundStatus(Enum):
+    """
+    Статусы операции возврата.
+    
+    - FINISHED: Успешный полный или частичный возврат
+    - PROCESSING: Возврат находящийся в процессе выполнения
+    - CANCELED: Возврат отмененный через личный кабинет
+    """
+    FINISHED = "finished"
+    PROCESSING = "processing"
+    CANCELED = "canceled"
+
+
+@dataclass
+class InvoiceItem:
+    """
+    Товарная позиция в чеке для возврата.
+    
+    :param name: Название товара
+    :param quantity: Количество
+    :param cost: Стоимость единицы
+    :param tax: Налоговая ставка (none, vat0, vat10, vat20, etc.)
+    :param payment_method: Способ оплаты (full_payment, partial_payment, prepayment, etc.)
+    :param payment_object: Объект платежа (payment, commodity, service, etc.)
+    """
+    name: str
+    quantity: int
+    cost: float
+    tax: str
+    payment_method: str
+    payment_object: str
+
+
+@dataclass
+class RefundRequest:
+    """
+    Запрос на создание возврата.
+    
+    :param op_key: Уникальный идентификатор операции
+    :param refund_sum: Сумма частичного возврата (не указывать при полном возврате)
+    :param invoice_items: Товарные позиции для формирования фискального чека возврата
+    """
+    op_key: str
+    refund_sum: Optional[float] = None
+    invoice_items: Optional[List[InvoiceItem]] = None
+
+
+@dataclass
+class RefundResponse:
+    """
+    Ответ от API создания возврата.
+    
+    :param success: Успешно ли создана заявка
+    :param message: Сообщение об ошибке (если success = False)
+    :param request_id: GUID созданной заявки (если success = True)
+    """
+    success: bool
+    message: Optional[str] = None
+    request_id: Optional[str] = None
+
+
+@dataclass
+class RefundStateResponse:
+    """
+    Ответ от API проверки статуса возврата.
+    
+    :param request_id: GUID созданной заявки
+    :param amount: Сумма возврата
+    :param label: Статус возврата
+    :param message: Сообщение об ошибке (если запрос неуспешен)
+    """
+    request_id: Optional[str] = None
+    amount: Optional[float] = None
+    label: Optional[RefundStatus] = None
+    message: Optional[str] = None
 
 
 @dataclass

@@ -18,10 +18,11 @@
 
 
 ## 🎨 Features
-✔️ Easy Payment Link Generation  
-✔️ Secure Transactions with Hash Algorithms  
-✔️ Supports all available Hashes  
-✔️ Simple and Fast Integration  
+✔️ Easy Payment Link Generation
+✔️ Secure Transactions with Hash Algorithms
+✔️ Supports all available Hashes
+✔️ Simple and Fast Integration
+✔️ Refund API Support (Full & Partial Refunds)
 
 ---
 

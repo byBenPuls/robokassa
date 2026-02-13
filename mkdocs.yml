@@ -9,6 +9,7 @@ nav:
   - Деактивация счёта/ссылки: deactivation.md
   - Получения статуса операции: operation.md
   - Подтверждение и переадресация: confirmation.md
+  - Возвраты: refund.md
   - FAQ: faq.md
 
 theme:
