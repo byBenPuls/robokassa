@@ -1,23 +1,30 @@
 from datetime import datetime
 from typing import List, Optional, Union
 
-from robokassa.connection import AUTH_BASE_URL, SERVICES_BASE_URL, Http
+from robokassa.connection import AUTH_BASE_URL, REFUND_BASE_URL, SERVICES_BASE_URL, Http
 from robokassa.exceptions import (
     IncorrectUrlMethodError,
     RobokassaInterfaceError,
+    RobokassaRequestError,
     UnusedParameterError,
     UnusedStrictUrlParameterError,
 )
 from robokassa.hash import Hash, HashAlgorithm
 from robokassa.merchant import OperationStateChecker
 from robokassa.payment import LinkGenerator
+from robokassa.refund import RefundManager
 from robokassa.signature import SignatureChecker
 from robokassa.types import (
     Culture,
     HTTPMethod,
+    InvoiceItem,
     InvoiceType,
     PaymentDetails,
     PaymentMethod,
+    RefundHashAlgorithm,
+    RefundRequest,
+    RefundResponse,
+    RefundStateResponse,
     RobokassaParams,
     RobokassaResponse,
 )
@@ -68,6 +75,16 @@ class BaseRobokassa(RobokassaAbstract):
             password_2=self._password2,
         )
 
+    def _init_refund_manager(self) -> Optional[RefundManager]:
+        """
+        Инициализация менеджера возврата, если настроен Password3.
+        
+        :return: RefundManager или None если Password3 не настроен
+        """
+        if not self._password3:
+            return None
+        return RefundManager(password3=self._password3, jwt_algorithm=self._jwt_algorithm)
+
     @property
     def merchant_login(self) -> str:
         return self._merchant_login
@@ -90,7 +107,9 @@ class Robokassa(BaseRobokassa):
         merchant_login: str,
         password1: str,
         password2: str,
+        password3: Optional[str] = None,
         algorithm: HashAlgorithm = HashAlgorithm.md5,
+        refund_algorithm: RefundHashAlgorithm = RefundHashAlgorithm.HS256,
         is_test: bool = False,
     ) -> None:
         super().__init__(
@@ -100,6 +119,9 @@ class Robokassa(BaseRobokassa):
             algorithm=algorithm,
             is_test=is_test,
         )
+        self._password3 = password3
+        self._refund_algorithm = refund_algorithm
+        self._refund_manager = self._init_refund_manager() if password3 else None
 
     def generate_open_payment_link(
         self,
@@ -395,4 +417,106 @@ class Robokassa(BaseRobokassa):
 
         return await self._operation_state_checker.get_state(
             http=self._create_http(AUTH_BASE_URL), inv_id=inv_id
+        )
+
+    async def refund_op(
+        self,
+        op_key: str,
+        refund_sum: Optional[float] = None,
+        invoice_items: Optional[List[InvoiceItem]] = None,
+    ) -> RefundResponse:
+        """
+        Инициировать возврат по операции.
+
+        Этот метод позволяет создать запрос на полный или частичный возврат средств
+        по успешно прошедшей операции оплаты.
+
+        Для работы этого метода необходимо:
+        1. Запросить доступ к API Refund в личном кабинете Robokassa
+        2. Сгенерировать Password3 в настройках магазина
+        3. Предоставить password3 при инициализации Robokassa клиента
+
+        :param op_key: Уникальный идентификатор операции (получается из OpStateExt или Result2)
+        :param refund_sum: Сумма частичного возврата (не указывать при полном возврате)
+        :param invoice_items: Товарные позиции для формирования фискального чека возврата
+        :return: Ответ от API создания возврата
+        :raises RobokassaRequestError: Если не настроен Password3
+
+        Example:
+            ```python
+            from robokassa import Robokassa, InvoiceItem
+
+            robokassa = Robokassa(
+                merchant_login="demo",
+                password1="pass1",
+                password2="pass2",
+                password3="pass3"  # Обязательно для возвратов
+            )
+
+            # Полный возврат без чека
+            response = await robokassa.refund_op(op_key="12345-ABC-123")
+
+            # Частичный возврат с чеком
+            items = [
+                InvoiceItem(
+                    name="Товар",
+                    quantity=1,
+                    cost=100.0,
+                    tax="none",
+                    payment_method="full_payment",
+                    payment_object="payment"
+                )
+            ]
+            response = await robokassa.refund_op(
+                op_key="12345-ABC-123",
+                refund_sum=50.0,
+                invoice_items=items
+            )
+            ```
+        """
+        if not self._refund_manager:
+            raise RobokassaRequestError(
+                "Password3 is required for refund operations. "
+                "Please provide password3 when initializing Robokassa client."
+            )
+
+        request = RefundRequest(
+            op_key=op_key, refund_sum=refund_sum, invoice_items=invoice_items
+        )
+
+        return await self._refund_manager.create_refund(
+            http=self._create_http(REFUND_BASE_URL), request=request
+        )
+
+    async def get_refund_status(self, request_id: str) -> RefundStateResponse:
+        """
+        Получить статус операции возврата.
+
+        Позволяет проверить текущий статус заявки на возврат,
+        созданной через метод refund_op.
+
+        :param request_id: GUID созданной заявки на возврат (получается в RefundResponse)
+        :return: Статус возврата с суммой и label
+        :raises RobokassaRequestError: Если не настроен Password3
+
+        Example:
+            ```python
+            # Создаем возврат
+            response = await robokassa.refund_op(op_key="12345-ABC-123")
+            request_id = response.request_id  # "68cd7fa6-1338-4745-ba5c-28d16cbcdb3d"
+
+            # Проверяем статус
+            status = await robokassa.get_refund_status(request_id=request_id)
+            print(f"Status: {status.label}")  # "finished", "processing" or "canceled"
+            print(f"Amount: {status.amount}")
+            ```
+        """
+        if not self._refund_manager:
+            raise RobokassaRequestError(
+                "Password3 is required for refund operations. "
+                "Please provide password3 when initializing Robokassa client."
+            )
+
+        return await self._refund_manager.get_refund_state(
+            http=self._create_http(REFUND_BASE_URL), request_id=request_id
         )
